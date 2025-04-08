@@ -7,6 +7,11 @@ import io
 import json
 
 
+type2hugetpye = {"bottle": 0, "can": 0,  # 可回收物
+                 "battery": 1, "smoke": 1,  # 有害垃圾
+                 "fruit": 2, "vegetable": 2,  # 厨余垃圾
+                 "brick": 3, "china": 3}  # 其他垃圾
+
 app = FastAPI()
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -37,10 +42,11 @@ async def predict(file: UploadFile = File(...)):
 
         _, predicted_idx = torch.max(output, 1)
         predict_class = id2class[predicted_idx.item()]
+        huge_type = type2hugetpye.get(predict_class, -1)
 
-        return JSONResponse(content={"class": predict_class, "error": 0})
+        return JSONResponse(content={"type": predict_class, "huge_type": huge_type, "error": 0})
     
     except Exception as e:
-        return JSONResponse(content={"class": "", "error": 1})
+        return JSONResponse(content={"type": "", "huge_type": huge_type, "error": 1})
     
 # uvicorn main:app --host 0.0.0.0 --port 8000

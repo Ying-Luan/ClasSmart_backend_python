@@ -9,7 +9,7 @@ class SimpleCNN(torch.nn.Module):
         self.conv2 = torch.nn.Conv2d(32, 8, kernel_size=5)
         self.gelu = torch.nn.GELU()
         self.pool = torch.nn.MaxPool2d(2, 2)
-        self.fc = torch.nn.Linear(8 * 109 * 93, 10)
+        self.fc = torch.nn.Linear(8 * 109 * 93, n_classes)
 
     def forward(self, x):
         x = self.pool(self.gelu(self.conv1(x)))  # (3, 448, 384) -> (32, 444, 380) -> (32, 222, 190)

@@ -42,11 +42,11 @@ async def predict(file: UploadFile = File(...)):
 
         _, predicted_idx = torch.max(output, 1)
         predict_class = id2class[predicted_idx.item()]
-        huge_type = type2hugetpye.get(predict_class, -1)
+        hugeType: int = type2hugetpye.get(predict_class, -1)
 
-        return JSONResponse(content={"type": predict_class, "huge_type": huge_type, "error": 0})
+        return JSONResponse(content={"type": predict_class, "hugeType": hugeType, "error": 0})
     
     except Exception as e:
-        return JSONResponse(content={"type": "", "huge_type": huge_type, "error": 1})
+        return JSONResponse(content={"type": "", "hugeType": hugeType, "error": 1})
     
 # uvicorn main:app --host 0.0.0.0 --port 8000

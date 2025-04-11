@@ -1,0 +1,5 @@
+fastapi==0.115.12
+Pillow==11.1.0
+torch==2.6.0+cu126
+torchvision==0.21.0+cu126
+uvicorn==0.34.0

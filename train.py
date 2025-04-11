@@ -10,7 +10,7 @@ from utils import *
 model_typr = "OLD"
 learning_rate = 1e-4
 epochs = 100
-train_loader, test_loader = dataloader_generate()
+train_loader, test_loader = dataloader_generate(data_train_root='./data/train', data_test_root='./data/test')
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 n_classes = 8
 

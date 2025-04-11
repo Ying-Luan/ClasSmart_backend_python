@@ -6,9 +6,10 @@ import torchvision.transforms as transforms
 import io
 import json
 import threading
-from utils import train, dataloader_generate, unzip_data
+from utils import train, dataloader_generate, unzip_data, manage_folders
 import copy
 import os
+import shutil
 
 
 # 分类映射表
@@ -37,68 +38,93 @@ with open("classdata.json", "r") as f:
     class2id = json.load(f)
 id2class = {_id: _class for _class, _id in class2id.items()}
 
-training_in_progress: bool = False
-training_status: str = "idle"
-training_progress: int = 0
-
-updated_flag: bool = False
+training_in_progress: bool = False  # 是否正在训练
+updated_flag: bool = False  # 是否有可更新的网络模型
 
 @app.post("/startTraining")
 async def start_training(
     file: UploadFile = File(...),
-    train_data_path: str = "",
-    test_data_path: str = "",
-    epochs: int = 20,
-    learning_rate: float = 1e-4,
+    count: int = 0,
 ):
     """
     开始训练
+
+    :param file: 训练数据 zip 文件
+    :param count: 照片数量
+    :return: 训练结果
     """
-    global training_in_progress, training_status, training_progress, net, device
+    # 参数设置
+    epochs: int = 100
+    if count < 10:
+        epochs *= 0.1
+    elif count < 100:
+        epochs *= 0.5
+    elif count > 1000:
+        epochs *= 2
+    epoch_save: int = 50
+    learning_rate: float = 1e-4
+    global training_in_progress, net, device
 
     if training_in_progress:
-        raise HTTPException(status_code=400, detail="Training is already in progress")
+        return JSONResponse(content={"code": 500})
     
     try:
+        updated = update_net()
+        
+        # 整理数据
         temp_dir = "temp_data"
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        os.makedirs(temp_dir)
 
         zip_path = os.path.join(temp_dir, file.filename)
         with open(zip_path, "wb") as buffer:
             contents = await file.read()
             buffer.write(contents)
 
-        unzip_data(zip_path, temp_dir)
-        pass
+        unzip_data(zip_path, temp_dir, delete_zip_file=True)  # 解压并删除 zip 文件
 
-        train_loader, test_loader = dataloader_generate(train_data_path=temp_dir)
+        manage_folders(main_folder=temp_dir, sub_folders=[floder for floder in class2id.keys()])
 
+        train_loader, _ = dataloader_generate(data_train_root=temp_dir)
+
+        def training_complete_callback():
+            """
+            训练完成回调函数
+
+            :return:
+            """
+            global training_in_progress, updated_flag
+            training_in_progress = False
+            updated_flag = True
+            print("回调函数执行完毕...")
+
+        # 开始训练
         net_training = copy.deepcopy(net).to(device)
         criterion = torch.nn.CrossEntropyLoss()
         optimizer = torch.optim.AdamW(net.parameters(), lr=learning_rate)
         training_thread = threading.Thread(
             target=train,
-            args=(net_training, train_loader, test_loader, criterion, optimizer, epochs, device),
+            args=(net_training, train_loader, None, criterion, optimizer, int(epochs), epoch_save, device, training_complete_callback),
         )
         training_thread.daemon = True
         training_thread.start()
 
         training_in_progress = True
-        training_status = "running"
-        training_progress = "running"
 
-        return JSONResponse(content={"status": "Training started"})
+        return JSONResponse(content={"code": 200})
     
     except Exception as e:
-        tarining_status = "error"
+        tarining_in_progress = False
         print(f"Error: {str(e)}")
-        raise JSONResponse(content={"status": "Error starting training"})
+        return JSONResponse(content={"code": 500})
     
 
 def update_net():
     """
     更新网络模型
+
+    :return: 是否更新成功
     """
     global net, device, updated_flag
     try:
@@ -107,6 +133,7 @@ def update_net():
             new_net.eval()
             net = new_net
             updated_flag = False
+            print("网络模型更新成功...")
             return True
         else:
             return False
@@ -117,6 +144,12 @@ def update_net():
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
+    """
+    预测垃圾类型
+
+    :param file: 图片文件
+    :return: 垃圾类型和大类
+    """
     try:
         updated = update_net()
 

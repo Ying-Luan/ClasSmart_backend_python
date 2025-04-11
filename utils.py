@@ -2,7 +2,7 @@ import os
 from PIL import Image
 import random
 import shutil
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 import json
@@ -125,7 +125,7 @@ def init_net(model_type: str, n_classes: int, device: torch.device):
     return net
 
 
-def dataloader_generate(data_train_root: str, data_test_root: str | None = None, class_to_idx: dict = None):
+def dataloader_generate(data_train_root: str, data_test_root: Union[str, None]=None, class_to_idx: dict = None):
     """
     生成训练集和测试集的 dataloader
 

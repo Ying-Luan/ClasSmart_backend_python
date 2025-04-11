@@ -120,12 +120,12 @@ def init_net(model_type: str, n_classes: int, device: torch.device):
     elif model_type == "SimpleCNN":
         net = SimpleCNN(n_classes=n_classes).to(device)
     elif model_type == "OLD":
-        net = torch.load("net.pth").to(device)
+        net = torch.load("net.pth", weights_only=False, map_location=device).to(device)
     
     return net
 
 
-def dataloader_generate(data_train_root: str, data_test_root: Union[str, None]=None, class_to_idx: dict = None):
+def dataloader_generate(data_train_root: str, data_test_root: Union[str, None] = None, class_to_idx: dict = None, json_save:bool = False):
     """
     生成训练集和测试集的 dataloader
 
@@ -148,8 +148,9 @@ def dataloader_generate(data_train_root: str, data_test_root: Union[str, None]=N
     if data_test_root is not None:
         test_dataset = datasets.ImageFolder(root=data_test_root, transform=transform)
 
-    with open("classdata.json", "w") as f:
-        json.dump(train_dataset.class_to_idx, f)
+    if json_save:
+        with open("classdata.json", "w") as f:
+            json.dump(train_dataset.class_to_idx, f)
     
     if class_to_idx is not None:
         train_dataset.class_to_idx = class_to_idx

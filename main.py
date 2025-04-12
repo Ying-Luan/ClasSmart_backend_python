@@ -97,6 +97,7 @@ async def start_training(
             global training_in_progress, updated_flag
             training_in_progress = False
             updated_flag = True
+            shutil.rmtree(temp_dir)
             print("回调函数执行完毕...")
 
         # 开始训练

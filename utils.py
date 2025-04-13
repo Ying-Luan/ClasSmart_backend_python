@@ -247,7 +247,7 @@ def manage_folders(main_folder: str, sub_folders: List[str]):
 
     :param main_folder: 主文件夹
     :param sub_folders: 子文件夹列表
-    :return:
+    :return: 在 sub_folders 中存在的子文件夹数量
     """
     if not os.path.exists(main_folder):
         os.makedirs(main_folder)
@@ -262,6 +262,10 @@ def manage_folders(main_folder: str, sub_folders: List[str]):
     # for floder in sub_folders:
     #     if floder not in existing_folders:
     #         os.makedirs(os.path.join(main_folder, floder))
+
+    return len([floder
+                for floder in os.listdir(main_folder)
+                if os.path.isdir(os.path.join(main_folder, floder))and floder in sub_folders])
 
 
 if __name__ == "__main__":

@@ -53,6 +53,11 @@ async def start_training(
     :param count: 照片数量
     :return: 训练结果
     """
+
+    if count <= 0:
+        print("数据集为空，无法训练...")
+        return JSONResponse(content={"code": 500})
+
     # 参数设置
     epochs: int = 100
     if count < 10:
@@ -84,7 +89,11 @@ async def start_training(
 
         unzip_data(zip_path, temp_dir, delete_zip_file=True)  # 解压并删除 zip 文件
 
-        manage_folders(main_folder=temp_dir, sub_folders=[floder for floder in class2id.keys()])
+        num_floders = manage_folders(main_folder=temp_dir, sub_folders=[floder for floder in class2id.keys()])
+
+        if num_floders <= 0:
+            print("没有可训练的数据集...")
+            return JSONResponse(content={"code": 500})
 
         train_loader, _ = dataloader_generate(data_train_root=temp_dir)
 

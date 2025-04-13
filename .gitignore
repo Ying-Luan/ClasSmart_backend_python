@@ -3,3 +3,5 @@ data
 temp_data
 .idea
 *.zip
+test_temp.py
+large_image.*

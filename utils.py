@@ -265,7 +265,7 @@ def manage_folders(main_folder: str, sub_folders: List[str]):
 
     return len([floder
                 for floder in os.listdir(main_folder)
-                if os.path.isdir(os.path.join(main_folder, floder))and floder in sub_folders])
+                if os.path.isdir(os.path.join(main_folder, floder)) and floder in sub_folders])
 
 
 if __name__ == "__main__":

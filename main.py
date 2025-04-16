@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 import io
 import json
 import threading
-from utils import train, dataloader_generate, unzip_data, manage_folders, handle_images_match_label
+from utils import unzip_data, manage_folders, threading_retrain
 import copy
 import os
 import shutil
@@ -99,10 +99,6 @@ async def start_training(
             print("没有可训练的数据集...")
             return JSONResponse(content={"code": 500})
 
-        # TODO
-        await handle_images_match_label(root_dir=temp_dir)
-
-        train_loader, _ = dataloader_generate(data_train_root=temp_dir)
 
         def training_complete_callback():
             """
@@ -116,13 +112,12 @@ async def start_training(
             shutil.rmtree(temp_dir)
             print("回调函数执行完毕...")
 
+        
         # 开始训练
         net_training = copy.deepcopy(net).to(device)
-        criterion = torch.nn.CrossEntropyLoss()
-        optimizer = torch.optim.AdamW(net.parameters(), lr=learning_rate)
         training_thread = threading.Thread(
-            target=train,
-            args=(net_training, train_loader, None, criterion, optimizer, int(epochs), epoch_save, device, training_complete_callback),
+            target=threading_retrain,
+            args=(net_training, learning_rate, int(epochs), epoch_save, device, temp_dir, training_complete_callback),
         )
         training_thread.daemon = True
         training_thread.start()

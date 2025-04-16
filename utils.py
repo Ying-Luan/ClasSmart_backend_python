@@ -13,6 +13,7 @@ from autogen_agentchat.messages import MultiModalMessage
 from autogen_core import Image as AGImage
 from autogen_core import CancellationToken
 from agent import agent
+import asyncio
 
 
 def get_image_dimension(directory: str):
@@ -173,7 +174,7 @@ def dataloader_generate(data_train_root: str, data_test_root: Union[str, None] =
     return train_loader, test_loader
 
 
-def train(net, train_loader, test_loader, criterion, optimizer, epochs: int, epoch_save: int, device: torch.device, training_complete_callback: callable = None):
+def train(net, train_loader, test_loader, criterion, optimizer, epochs: int, epoch_save: int, device: torch.device):
     """
     训练模型
 
@@ -185,7 +186,6 @@ def train(net, train_loader, test_loader, criterion, optimizer, epochs: int, epo
     :param epochs: 训练轮数
     :param epoch_save: 保存模型的轮数
     :param device: 设备
-    :param training_complete_callback: 训练完成回调函数
     :return:
     """
     net.train()
@@ -223,10 +223,6 @@ def train(net, train_loader, test_loader, criterion, optimizer, epochs: int, epo
         if epoch % epoch_save == 0 or epoch == epochs - 1:
             torch.save(net, "net.pth")
             print("模型已保存...")
-            
-    if training_complete_callback is not None:
-        training_complete_callback()
-    print("训练结束...")
 
 
 def unzip_data(zip_file_path: str, target_dir_path: str, delete_zip_file: bool = False):
@@ -319,6 +315,39 @@ async def handle_images_match_label(root_dir: str) -> None:
                 
             except Exception as e:
                 print(f"处理图片 {img_path} 时出错: {str(e)}")
+
+
+def threading_retrain(net, learning_rate: float, epochs: int, epoch_save: int, device: torch.device, temp_dir: str, training_complete_callback: callable = None):
+    """
+    多线程重新训练模型
+    
+    :param net: 模型
+    :param learning_rate: 学习率
+    :param epochs: 训练轮数
+    :param epoch_save: 保存模型的轮数
+    :param device: 设备
+    :param temp_dir: 临时文件夹
+    :param training_complete_callback: 训练完成回调函数
+    :return:
+    """
+    asyncio.run(handle_images_match_label(root_dir=temp_dir))
+    train_loader, _ = dataloader_generate(data_train_root=temp_dir)
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.AdamW(net.parameters(), lr=learning_rate)
+    train(
+        net=net,
+        train_loader=train_loader,
+        test_loader=None,
+        criterion=criterion,
+        optimizer=optimizer,
+        epochs=epochs,
+        epoch_save=epoch_save,
+        device=device,
+    )
+
+    if training_complete_callback is not None:
+        training_complete_callback()
+    print("训练结束...")
 
 
 if __name__ == "__main__":

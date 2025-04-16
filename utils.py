@@ -290,7 +290,7 @@ async def handle_images_match_label(root_dir: str) -> None:
         
         # 获取当前标签文件夹下的所有图片
         # image_files = [f for f in os.listdir(label_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif'))]
-        image_files = [image for image in image_files]
+        image_files = [image for image in os.listdir(label_path)]
         
         # 遍历当前标签文件夹下的所有图片
         for img_file in image_files:

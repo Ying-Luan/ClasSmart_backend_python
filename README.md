@@ -12,7 +12,7 @@ CLasSmart 灵分是一款智能垃圾分类系统，用户仅需要提交待分�
   
    ```shell
    # 命令行运行以下指令
-   python main.py
+   uvicorn main:app --host 0.0.0.0 --port 8000
    ```
 
 ## 文件介绍

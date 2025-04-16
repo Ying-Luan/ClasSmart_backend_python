@@ -5,3 +5,4 @@ temp_data
 *.zip
 test_temp.py
 large_image.*
+.env

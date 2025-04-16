@@ -1,8 +1,6 @@
-from typing import List
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 from PIL import Image
-from sympy import false, im
 import torch
 import torchvision.transforms as transforms
 import io

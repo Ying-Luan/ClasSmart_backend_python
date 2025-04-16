@@ -187,7 +187,7 @@ async def predict(file: UploadFile = File(...)) -> JSONResponse:
         return JSONResponse(content={"type": predict_class, "hugeType": hugeType, "error": 0})
     
     except Exception as e:
-        return JSONResponse(content={"type": "", "hugeType": hugeType, "error": 1})
+        return JSONResponse(content={"type": "", "hugeType": -1, "error": 1})
     
     
 if __name__ == "__main__":

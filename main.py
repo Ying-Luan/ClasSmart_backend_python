@@ -46,7 +46,7 @@ async def handle_images_match_label(root_dir) -> None:
                 
                 img = AGImage(pil_image)
                 multi_model_message = MultiModalMessage(
-                    content=[f'The given label is {label}, give me your identifying result with rules defined before', img],
+                    content=[f'The given label is {label}, give me your identifying result according to rules defined before', img],
                     source='user'
                 )
                 response = await agent.on_messages([multi_model_message], CancellationToken())

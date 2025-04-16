@@ -4,7 +4,7 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+load_dotenv(override=True)
 
 # 定义Agent
 model_client = OpenAIChatCompletionClient(

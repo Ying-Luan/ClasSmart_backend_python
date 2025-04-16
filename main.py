@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 from PIL import Image
 import torch
@@ -6,63 +6,13 @@ import torchvision.transforms as transforms
 import io
 import json
 import threading
-from utils import train, dataloader_generate, unzip_data, manage_folders
+from utils import train, dataloader_generate, unzip_data, manage_folders, handle_images_match_label
 import copy
 import os
 import shutil
-from autogen_agentchat.messages import MultiModalMessage
-from autogen_core import Image as AGImage
-from autogen_core import CancellationToken
-from agent import agent
-
-async def handle_images_match_label(root_dir) -> None:
-    """
-    检查root_dir目录下每个子文件夹中的图片是否与文件夹名称(标签)匹配
-    
-    参数:
-        root_dir: 包含所有标签子文件夹的根目录
-    """
-    
-    # 获取所有子文件夹（标签）
-    label_dirs = [f for f in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, f))]
-    
-    # 遍历每个标签文件夹
-    for label in label_dirs:
-        label_path = os.path.join(root_dir, label)
-        print(f"处理标签: {label}")
-        
-        # 获取当前标签文件夹下的所有图片
-        image_files = [f for f in os.listdir(label_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif'))]
-        
-        # 遍历当前标签文件夹下的所有图片
-        for img_file in image_files:
-            img_path = os.path.join(label_path, img_file)
-            
-            # 读取图片
-            try:
-                pil_image = Image.open(img_path)
-                
-                img = AGImage(pil_image)
-                multi_model_message = MultiModalMessage(
-                    content=[f'The given label is {label}, give me your identifying result according to rules defined before', img],
-                    source='user'
-                )
-                response = await agent.on_messages([multi_model_message], CancellationToken())
-                
-                pil_image.close()
-                # 这里替换为实际的匹配检查结果
-                match_result = True if response.chat_message==1 else False  
-                
-                # 不匹配直接删除
-                if not match_result:
-                    os.remove(img_path)
-                
-                print(f"  图片 {img_file}: {'匹配' if match_result else '不匹配'}")
-                
-            except Exception as e:
-                print(f"处理图片 {img_path} 时出错: {str(e)}")
     
 
+### 相关参数定义
 # 分类映射表
 type2hugetpye = {"bottle": 0, "can": 0,  # 可回收物
                  "battery": 1, "smoke": 1,  # 有害垃圾
@@ -92,11 +42,13 @@ id2class = {_id: _class for _class, _id in class2id.items()}
 training_in_progress: bool = False  # 是否正在训练
 updated_flag: bool = False  # 是否有可更新的网络模型
 
+
+### 函数定义
 @app.post("/startTraining")
 async def start_training(
     file: UploadFile = File(...),
     count: int = 0,
-):
+) -> JSONResponse:
     """
     开始训练
 
@@ -147,7 +99,7 @@ async def start_training(
             return JSONResponse(content={"code": 500})
 
         # TODO
-        handle_images_match_label(temp_dir)
+        await handle_images_match_label(root_dir=temp_dir)
 
         train_loader, _ = dataloader_generate(data_train_root=temp_dir)
 
@@ -184,7 +136,7 @@ async def start_training(
         return JSONResponse(content={"code": 500})
     
 
-def update_net():
+def update_net() -> bool:
     """
     更新网络模型
 
@@ -207,7 +159,7 @@ def update_net():
 
 
 @app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+async def predict(file: UploadFile = File(...)) -> JSONResponse:
     """
     预测垃圾类型
 

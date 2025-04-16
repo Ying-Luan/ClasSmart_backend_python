@@ -9,6 +9,10 @@ import json
 import torch
 from model import *
 import zipfile
+from autogen_agentchat.messages import MultiModalMessage
+from autogen_core import Image as AGImage
+from autogen_core import CancellationToken
+from agent import agent
 
 
 def get_image_dimension(directory: str):
@@ -243,7 +247,7 @@ def unzip_data(zip_file_path: str, target_dir_path: str, delete_zip_file: bool =
 
 def manage_folders(main_folder: str, sub_folders: List[str]):
     """
-    管理文件夹
+    管理文件夹，删除多余的子文件夹，创建缺失的子文件夹
 
     :param main_folder: 主文件夹
     :param sub_folders: 子文件夹列表
@@ -266,6 +270,55 @@ def manage_folders(main_folder: str, sub_folders: List[str]):
     return len([floder
                 for floder in os.listdir(main_folder)
                 if os.path.isdir(os.path.join(main_folder, floder)) and floder in sub_folders])
+
+
+async def handle_images_match_label(root_dir: str) -> None:
+    """
+    检查root_dir目录下每个子文件夹中的图片是否与文件夹名称(标签)匹配
+    
+    :param root_dir: 包含所有标签子文件夹的根目录
+    :return:
+    """
+    
+    # 获取所有子文件夹（标签）
+    label_dirs = [folder for folder in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, folder))]
+    
+    # 遍历每个标签文件夹
+    for label in label_dirs:
+        label_path = os.path.join(root_dir, label)
+        print(f"处理标签: {label}")
+        
+        # 获取当前标签文件夹下的所有图片
+        # image_files = [f for f in os.listdir(label_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif'))]
+        image_files = [image for image in image_files]
+        
+        # 遍历当前标签文件夹下的所有图片
+        for img_file in image_files:
+            img_path = os.path.join(label_path, img_file)
+            
+            # 读取图片
+            try:
+                pil_image = Image.open(img_path)
+                
+                img = AGImage(pil_image)
+                multi_model_message = MultiModalMessage(
+                    content=[f'The given label is {label}, give me your identifying result according to rules defined before', img],
+                    source='user',
+                )
+                response = await agent.on_messages([multi_model_message], CancellationToken())
+                
+                pil_image.close()
+                # 这里替换为实际的匹配检查结果
+                match_result = True if response.chat_message == 1 else False  
+                
+                # 不匹配直接删除
+                if not match_result:
+                    os.remove(img_path)
+                
+                print(f"  图片 {img_file}: {'匹配' if match_result else '不匹配'}")
+                
+            except Exception as e:
+                print(f"处理图片 {img_path} 时出错: {str(e)}")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 from PIL import Image
 import torch
@@ -47,7 +47,7 @@ updated_flag: bool = False  # 是否有可更新的网络模型
 @app.post("/startTraining")
 async def start_training(
     file: UploadFile = File(...),
-    count: int = 0,
+    count = Form(0),
 ) -> JSONResponse:
     """
     开始训练
@@ -56,7 +56,8 @@ async def start_training(
     :param count: 照片数量
     :return: 训练结果
     """
-
+    count = int(count)
+    
     if count <= 0:
         print("数据集为空，无法训练...")
         return JSONResponse(content={"code": 500})

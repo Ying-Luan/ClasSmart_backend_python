@@ -1,6 +1,8 @@
+from typing import List
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 from PIL import Image
+from sympy import false, im
 import torch
 import torchvision.transforms as transforms
 import io
@@ -10,7 +12,58 @@ from utils import train, dataloader_generate, unzip_data, manage_folders
 import copy
 import os
 import shutil
+from autogen_agentchat.messages import MultiModalMessage
+from autogen_core import Image as AGImage
+from autogen_core import CancellationToken
+from agent import agent
 
+async def handle_images_match_label(root_dir) -> None:
+    """
+    检查root_dir目录下每个子文件夹中的图片是否与文件夹名称(标签)匹配
+    
+    参数:
+        root_dir: 包含所有标签子文件夹的根目录
+    """
+    
+    # 获取所有子文件夹（标签）
+    label_dirs = [f for f in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, f))]
+    
+    # 遍历每个标签文件夹
+    for label in label_dirs:
+        label_path = os.path.join(root_dir, label)
+        print(f"处理标签: {label}")
+        
+        # 获取当前标签文件夹下的所有图片
+        image_files = [f for f in os.listdir(label_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif'))]
+        
+        # 遍历当前标签文件夹下的所有图片
+        for img_file in image_files:
+            img_path = os.path.join(label_path, img_file)
+            
+            # 读取图片
+            try:
+                pil_image = Image.open(img_path)
+                
+                img = AGImage(pil_image)
+                multi_model_message = MultiModalMessage(
+                    content=[f'The given label is {label}, give me your identifying result with rules defined before', img],
+                    source='user'
+                )
+                response = await agent.on_messages([multi_model_message], CancellationToken())
+                
+                pil_image.close()
+                # 这里替换为实际的匹配检查结果
+                match_result = True if response.chat_message==1 else False  
+                
+                # 不匹配直接删除
+                if not match_result:
+                    os.remove(img_path)
+                
+                print(f"  图片 {img_file}: {'匹配' if match_result else '不匹配'}")
+                
+            except Exception as e:
+                print(f"处理图片 {img_path} 时出错: {str(e)}")
+    
 
 # 分类映射表
 type2hugetpye = {"bottle": 0, "can": 0,  # 可回收物
@@ -90,10 +143,13 @@ async def start_training(
         unzip_data(zip_path, temp_dir, delete_zip_file=True)  # 解压并删除 zip 文件
 
         num_floders = manage_folders(main_folder=temp_dir, sub_folders=[floder for floder in class2id.keys()])
-
+        
         if num_floders <= 0:
             print("没有可训练的数据集...")
             return JSONResponse(content={"code": 500})
+
+        # TODO
+        handle_images_match_label(temp_dir)
 
         train_loader, _ = dataloader_generate(data_train_root=temp_dir)
 
@@ -182,6 +238,7 @@ async def predict(file: UploadFile = File(...)):
     
     except Exception as e:
         return JSONResponse(content={"type": "", "hugeType": hugeType, "error": 1})
+    
     
 if __name__ == "__main__":
     import uvicorn; uvicorn.run(app, host="0.0.0.0", port=8000)

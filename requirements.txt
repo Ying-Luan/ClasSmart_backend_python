@@ -1,9 +1,10 @@
-autogen_agentchat==0.2.40
-autogen_core==0.0.2
-autogen_ext==0.0.1
+autogen_agentchat==0.5.3
+autogen_core==0.5.3
+autogen_ext==0.5.3
 fastapi==0.115.12
+numpy==2.2.4
 Pillow==11.2.1
 python-dotenv==1.1.0
-torch==2.6.0+cu124
-torchvision==0.21.0+cu124
+torch==2.6.0+cu126
+torchvision==0.21.0+cu126
 uvicorn==0.34.1

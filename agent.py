@@ -1,5 +1,4 @@
 from autogen_agentchat.agents import AssistantAgent
-from autogen_core import CancellationToken
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from dotenv import load_dotenv
 import os
@@ -10,6 +9,7 @@ load_dotenv(override=True)
 model_client = OpenAIChatCompletionClient(
     model='gpt-4o-mini',
     base_url=os.getenv('BASE_URL'),
+    api_key=os.getenv('OPENAI_API_KEY')
 )
 
 agent = AssistantAgent(

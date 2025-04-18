@@ -316,6 +316,9 @@ async def handle_images_match_label(root_dir: str) -> None:
             except Exception as e:
                 print(f"处理图片 {img_path} 时出错: {str(e)}")
 
+        if len(os.listdir(label_path)) == 0:
+            os.rmdir(label_path)
+
 
 def threading_retrain(net, learning_rate: float, epochs: int, epoch_save: int, device: torch.device, temp_dir: str, training_complete_callback: callable = None):
     """
@@ -331,23 +334,34 @@ def threading_retrain(net, learning_rate: float, epochs: int, epoch_save: int, d
     :return:
     """
     asyncio.run(handle_images_match_label(root_dir=temp_dir))
-    train_loader, _ = dataloader_generate(data_train_root=temp_dir)
-    criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.AdamW(net.parameters(), lr=learning_rate)
-    train(
-        net=net,
-        train_loader=train_loader,
-        test_loader=None,
-        criterion=criterion,
-        optimizer=optimizer,
-        epochs=epochs,
-        epoch_save=epoch_save,
-        device=device,
-    )
+
+    label_dirs = [folder for folder in os.listdir(temp_dir) if os.path.isdir(os.path.join(temp_dir, folder))]
+    
+    if len(label_dirs) == 0:
+        print("处理后没有需要训练的数据...")
+    else:
+        print(f"开始重新训练模型，标签数量: {len(label_dirs)}")
+        train_loader, _ = dataloader_generate(data_train_root=temp_dir)
+        criterion = torch.nn.CrossEntropyLoss()
+        optimizer = torch.optim.AdamW(net.parameters(), lr=learning_rate)
+        train(
+            net=net,
+            train_loader=train_loader,
+            test_loader=None,
+            criterion=criterion,
+            optimizer=optimizer,
+            epochs=epochs,
+            epoch_save=epoch_save,
+            device=device,
+        )
 
     if training_complete_callback is not None:
         training_complete_callback()
-    print("训练结束...")
+    
+    if len(label_dirs) == 0:
+        print("退出训练...")
+    else:
+        print("训练结束...")
 
 
 if __name__ == "__main__":
